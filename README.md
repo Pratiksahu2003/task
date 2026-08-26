@@ -1,138 +1,73 @@
 # Task Manager
 
-A simple Laravel task management web application with project filtering and drag-and-drop reordering.
-
-## Features
-
-- Create, edit, and delete tasks
-- Each task stores: name, priority, created/updated timestamps
-- Drag-and-drop task reordering in the browser
-- Priority is automatically updated when tasks are reordered (#1 at the top)
-- Tasks are stored in a MySQL database
-- Project support: filter tasks by project using a dropdown
+Simple Laravel app for managing tasks. Tasks belong to a project, and you can drag/drop them to change priority.
 
 ## Requirements
 
-- PHP 8.3 or higher
+- PHP 8.3+
 - Composer
-- MySQL 8.0+ (or MariaDB equivalent)
-- Node.js is **not** required (the UI uses a CDN for SortableJS)
+- MySQL
 
-## Local Setup
+## Setup
 
-1. **Clone or extract the project**
+1. Install dependencies:
 
-   ```bash
-   cd task
-   ```
-
-2. **Install PHP dependencies**
-
-   ```bash
-   composer install
-   ```
-
-3. **Configure environment**
-
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
-
-   Update your `.env` database settings:
-
-   ```env
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=task_manager
-   DB_USERNAME=your_mysql_user
-   DB_PASSWORD=your_mysql_password
-   ```
-
-4. **Create the MySQL database**
-
-   ```sql
-   CREATE DATABASE task_manager CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   ```
-
-5. **Run migrations and seed sample data**
-
-   ```bash
-   php artisan migrate --seed
-   ```
-
-6. **Start the development server**
-
-   ```bash
-   php artisan serve
-   ```
-
-7. Open `http://127.0.0.1:8000` in your browser.
-
-## Usage
-
-1. Select a project from the dropdown to view its tasks.
-2. Use **New Task** to create a task for the selected project.
-3. Drag tasks by the handle (`≡`) to reorder them. Priorities are saved automatically.
-4. Use **Edit** or **Delete** on each task row as needed.
-5. Add new projects from the **Add Project** form on the home page.
-
-## Deployment Notes
-
-For production:
-
-1. Set `APP_ENV=production` and `APP_DEBUG=false` in `.env`.
-2. Run:
-
-   ```bash
-   composer install --no-dev --optimize-autoloader
-   php artisan migrate --force
-   php artisan config:cache
-   php artisan route:cache
-   php artisan view:cache
-   ```
-
-3. Point your web server document root to the `public/` directory.
-4. Ensure the web server can write to `storage/` and `bootstrap/cache/`.
-
-### Apache example
-
-Enable `mod_rewrite` and set the virtual host document root to `public/`.
-
-### Nginx example
-
-```nginx
-server {
-    listen 80;
-    server_name example.com;
-    root /var/www/task/public;
-
-    index index.php;
-
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    location ~ \.php$ {
-        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
-        include fastcgi_params;
-    }
-}
+```
+composer install
 ```
 
-## Application Structure
+2. Copy env file and generate key:
 
-- `app/Http/Controllers/TaskController.php` — task CRUD and reorder endpoint
-- `app/Http/Controllers/ProjectController.php` — project creation
-- `app/Models/Task.php` and `app/Models/Project.php` — Eloquent models
-- `database/migrations/` — MySQL schema for projects and tasks
-- `resources/views/tasks/` — Blade templates for the UI
+```
+cp .env.example .env
+php artisan key:generate
+```
 
-## Tech Stack
+3. Create a MySQL database (e.g. `task_manager`) and update `.env`:
 
-- Laravel 11
-- PHP 8.3+
-- MySQL
-- SortableJS (drag-and-drop)
+```
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=task_manager
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+4. Run migrations (optional: seed some sample data):
+
+```
+php artisan migrate --seed
+```
+
+5. Start the app:
+
+```
+php artisan serve
+```
+
+Then open http://127.0.0.1:8000
+
+## What it does
+
+- Create / edit / delete tasks (name, priority, timestamps)
+- Drag and drop to reorder — priority is updated based on the new order (#1 at top)
+- Filter tasks by project using the dropdown
+- Create new projects from the main page
+
+## Deploy
+
+Point your web server document root to the `public` folder.
+
+Make sure `storage` and `bootstrap/cache` are writable.
+
+For production you probably want:
+
+```
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan config:cache
+php artisan route:cache
+```
+
+Also set `APP_ENV=production` and `APP_DEBUG=false` in `.env`.

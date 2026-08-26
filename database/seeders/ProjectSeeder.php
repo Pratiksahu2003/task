@@ -10,35 +10,14 @@ class ProjectSeeder extends Seeder
 {
     public function run(): void
     {
-        $website = Project::create(['name' => 'Website Redesign']);
-        $mobile = Project::create(['name' => 'Mobile App']);
+        $p1 = Project::create(['name' => 'Personal']);
+        $p2 = Project::create(['name' => 'Work']);
 
-        $websiteTasks = [
-            'Design homepage mockup',
-            'Implement responsive layout',
-            'Write deployment checklist',
-        ];
+        Task::create(['project_id' => $p1->id, 'name' => 'Buy groceries', 'priority' => 1]);
+        Task::create(['project_id' => $p1->id, 'name' => 'Call dentist', 'priority' => 2]);
 
-        foreach ($websiteTasks as $index => $name) {
-            Task::create([
-                'project_id' => $website->id,
-                'name' => $name,
-                'priority' => $index + 1,
-            ]);
-        }
-
-        $mobileTasks = [
-            'Set up authentication',
-            'Build task list screen',
-            'Add push notifications',
-        ];
-
-        foreach ($mobileTasks as $index => $name) {
-            Task::create([
-                'project_id' => $mobile->id,
-                'name' => $name,
-                'priority' => $index + 1,
-            ]);
-        }
+        Task::create(['project_id' => $p2->id, 'name' => 'Finish report', 'priority' => 1]);
+        Task::create(['project_id' => $p2->id, 'name' => 'Email client', 'priority' => 2]);
+        Task::create(['project_id' => $p2->id, 'name' => 'Prepare meeting notes', 'priority' => 3]);
     }
 }

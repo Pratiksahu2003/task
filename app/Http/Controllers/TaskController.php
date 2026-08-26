@@ -2,143 +2,124 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreTaskRequest;
-use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Project;
 use App\Models\Task;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\View\View;
 
 class TaskController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request)
     {
         $projects = Project::orderBy('name')->get();
-        $selectedProjectId = $request->integer('project_id') ?: $projects->first()?->id;
+        $projectId = $request->input('project_id', optional($projects->first())->id);
 
-        $tasks = collect();
-
-        if ($selectedProjectId) {
-            $tasks = Task::where('project_id', $selectedProjectId)
+        $tasks = [];
+        if ($projectId) {
+            $tasks = Task::where('project_id', $projectId)
                 ->orderBy('priority')
                 ->get();
         }
 
-        return view('tasks.index', [
-            'projects' => $projects,
-            'tasks' => $tasks,
-            'selectedProjectId' => $selectedProjectId,
-        ]);
+        return view('tasks.index', compact('projects', 'tasks', 'projectId'));
     }
 
-    public function create(Request $request): View
+    public function create(Request $request)
     {
-        return view('tasks.create', [
-            'projects' => Project::orderBy('name')->get(),
-            'selectedProjectId' => $request->integer('project_id') ?: null,
-        ]);
+        $projects = Project::orderBy('name')->get();
+        $projectId = $request->get('project_id');
+
+        return view('tasks.create', compact('projects', 'projectId'));
     }
 
-    public function store(StoreTaskRequest $request): RedirectResponse
+    public function store(Request $request)
     {
-        $validated = $request->validated();
-
-        $nextPriority = Task::where('project_id', $validated['project_id'])->max('priority') + 1;
-
-        Task::create([
-            'name' => $validated['name'],
-            'project_id' => $validated['project_id'],
-            'priority' => $nextPriority ?: 1,
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'project_id' => 'required|exists:projects,id',
         ]);
+
+        // new tasks go to the bottom
+        $priority = Task::where('project_id', $data['project_id'])->max('priority');
+        $data['priority'] = $priority ? $priority + 1 : 1;
+
+        Task::create($data);
 
         return redirect()
-            ->route('tasks.index', ['project_id' => $validated['project_id']])
-            ->with('success', 'Task created successfully.');
+            ->route('tasks.index', ['project_id' => $data['project_id']])
+            ->with('success', 'Task created.');
     }
 
-    public function edit(Task $task): View
+    public function edit(Task $task)
     {
-        return view('tasks.edit', [
-            'task' => $task,
-            'projects' => Project::orderBy('name')->get(),
+        $projects = Project::orderBy('name')->get();
+
+        return view('tasks.edit', compact('task', 'projects'));
+    }
+
+    public function update(Request $request, Task $task)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'project_id' => 'required|exists:projects,id',
         ]);
-    }
 
-    public function update(UpdateTaskRequest $request, Task $task): RedirectResponse
-    {
-        $validated = $request->validated();
-        $previousProjectId = $task->project_id;
+        $oldProjectId = $task->project_id;
 
-        if ($validated['project_id'] !== $previousProjectId) {
-            $task->update([
-                'name' => $validated['name'],
-                'project_id' => $validated['project_id'],
-                'priority' => Task::where('project_id', $validated['project_id'])->max('priority') + 1 ?: 1,
-            ]);
-
-            $this->normalizePriorities($previousProjectId);
+        // if moved to another project, put it at the end of that list
+        if ($data['project_id'] != $oldProjectId) {
+            $priority = Task::where('project_id', $data['project_id'])->max('priority');
+            $data['priority'] = $priority ? $priority + 1 : 1;
+            $task->update($data);
+            $this->recalculatePriorities($oldProjectId);
         } else {
-            $task->update([
-                'name' => $validated['name'],
-                'project_id' => $validated['project_id'],
-            ]);
+            $task->update($data);
         }
 
         return redirect()
-            ->route('tasks.index', ['project_id' => $validated['project_id']])
-            ->with('success', 'Task updated successfully.');
+            ->route('tasks.index', ['project_id' => $data['project_id']])
+            ->with('success', 'Task updated.');
     }
 
-    public function destroy(Task $task): RedirectResponse
+    public function destroy(Task $task)
     {
         $projectId = $task->project_id;
-
         $task->delete();
-        $this->normalizePriorities($projectId);
+
+        // keep priorities sequential after delete
+        $this->recalculatePriorities($projectId);
 
         return redirect()
             ->route('tasks.index', ['project_id' => $projectId])
-            ->with('success', 'Task deleted successfully.');
+            ->with('success', 'Task deleted.');
     }
 
-    public function reorder(Request $request): JsonResponse
+    public function reorder(Request $request)
     {
-        $validated = $request->validate([
-            'project_id' => ['required', 'exists:projects,id'],
-            'task_ids' => ['required', 'array', 'min:1'],
-            'task_ids.*' => ['integer', 'exists:tasks,id'],
+        $request->validate([
+            'project_id' => 'required|exists:projects,id',
+            'order' => 'required|array',
+            'order.*' => 'integer|exists:tasks,id',
         ]);
 
-        $tasks = Task::where('project_id', $validated['project_id'])
-            ->whereIn('id', $validated['task_ids'])
-            ->get();
-
-        if ($tasks->count() !== count($validated['task_ids'])) {
-            return response()->json(['message' => 'Invalid task selection for this project.'], 422);
-        }
-
-        DB::transaction(function () use ($validated): void {
-            foreach ($validated['task_ids'] as $index => $taskId) {
+        DB::transaction(function () use ($request) {
+            foreach ($request->order as $index => $taskId) {
                 Task::where('id', $taskId)
-                    ->where('project_id', $validated['project_id'])
+                    ->where('project_id', $request->project_id)
                     ->update(['priority' => $index + 1]);
             }
         });
 
-        return response()->json(['message' => 'Task order updated.']);
+        return response()->json(['ok' => true]);
     }
 
-    private function normalizePriorities(int $projectId): void
+    private function recalculatePriorities($projectId)
     {
-        $tasks = Task::where('project_id', $projectId)
-            ->orderBy('priority')
-            ->get();
+        $tasks = Task::where('project_id', $projectId)->orderBy('priority')->get();
 
-        foreach ($tasks as $index => $task) {
-            $task->update(['priority' => $index + 1]);
+        foreach ($tasks as $i => $task) {
+            $task->priority = $i + 1;
+            $task->save();
         }
     }
 }

@@ -3,17 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Task extends Model
 {
-    protected $fillable = [
-        'project_id',
-        'name',
-        'priority',
-    ];
+    protected $fillable = ['project_id', 'name', 'priority'];
 
-    public function project(): BelongsTo
+    public function project()
     {
         return $this->belongsTo(Project::class);
     }

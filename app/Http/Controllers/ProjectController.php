@@ -2,18 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreProjectRequest;
 use App\Models\Project;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class ProjectController extends Controller
 {
-    public function store(StoreProjectRequest $request): RedirectResponse
+    public function store(Request $request)
     {
-        $project = Project::create($request->validated());
+        $data = $request->validate([
+            'name' => 'required|string|max:255|unique:projects,name',
+        ]);
+
+        $project = Project::create($data);
 
         return redirect()
             ->route('tasks.index', ['project_id' => $project->id])
-            ->with('success', 'Project created successfully.');
+            ->with('success', 'Project created.');
     }
 }
