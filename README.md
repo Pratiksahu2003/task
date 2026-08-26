@@ -1,66 +1,138 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Task Manager
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A simple Laravel task management web application with project filtering and drag-and-drop reordering.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Create, edit, and delete tasks
+- Each task stores: name, priority, created/updated timestamps
+- Drag-and-drop task reordering in the browser
+- Priority is automatically updated when tasks are reordered (#1 at the top)
+- Tasks are stored in a MySQL database
+- Project support: filter tasks by project using a dropdown
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requirements
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.3 or higher
+- Composer
+- MySQL 8.0+ (or MariaDB equivalent)
+- Node.js is **not** required (the UI uses a CDN for SortableJS)
 
-## Learning Laravel
+## Local Setup
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+1. **Clone or extract the project**
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+   ```bash
+   cd task
+   ```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+2. **Install PHP dependencies**
 
-## Laravel Sponsors
+   ```bash
+   composer install
+   ```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+3. **Configure environment**
 
-### Premium Partners
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+   Update your `.env` database settings:
 
-## Contributing
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=task_manager
+   DB_USERNAME=your_mysql_user
+   DB_PASSWORD=your_mysql_password
+   ```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+4. **Create the MySQL database**
 
-## Code of Conduct
+   ```sql
+   CREATE DATABASE task_manager CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+5. **Run migrations and seed sample data**
 
-## Security Vulnerabilities
+   ```bash
+   php artisan migrate --seed
+   ```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+6. **Start the development server**
 
-## License
+   ```bash
+   php artisan serve
+   ```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+7. Open `http://127.0.0.1:8000` in your browser.
+
+## Usage
+
+1. Select a project from the dropdown to view its tasks.
+2. Use **New Task** to create a task for the selected project.
+3. Drag tasks by the handle (`≡`) to reorder them. Priorities are saved automatically.
+4. Use **Edit** or **Delete** on each task row as needed.
+5. Add new projects from the **Add Project** form on the home page.
+
+## Deployment Notes
+
+For production:
+
+1. Set `APP_ENV=production` and `APP_DEBUG=false` in `.env`.
+2. Run:
+
+   ```bash
+   composer install --no-dev --optimize-autoloader
+   php artisan migrate --force
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:cache
+   ```
+
+3. Point your web server document root to the `public/` directory.
+4. Ensure the web server can write to `storage/` and `bootstrap/cache/`.
+
+### Apache example
+
+Enable `mod_rewrite` and set the virtual host document root to `public/`.
+
+### Nginx example
+
+```nginx
+server {
+    listen 80;
+    server_name example.com;
+    root /var/www/task/public;
+
+    index index.php;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+}
+```
+
+## Application Structure
+
+- `app/Http/Controllers/TaskController.php` — task CRUD and reorder endpoint
+- `app/Http/Controllers/ProjectController.php` — project creation
+- `app/Models/Task.php` and `app/Models/Project.php` — Eloquent models
+- `database/migrations/` — MySQL schema for projects and tasks
+- `resources/views/tasks/` — Blade templates for the UI
+
+## Tech Stack
+
+- Laravel 11
+- PHP 8.3+
+- MySQL
+- SortableJS (drag-and-drop)
